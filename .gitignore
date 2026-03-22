@@ -1,0 +1,33 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Node.js
+node_modules/
+dist/
+.vite/
+
+# Docker volumes
+pgdata/
+uploads/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log

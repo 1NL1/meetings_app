@@ -1,0 +1,173 @@
+import os
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.dependencies import get_db, get_current_user
+from app.models.meeting import Meeting
+from app.models.template import Template
+from app.models.user import User
+from app.schemas.meeting import MeetingCreate, MeetingResponse, ReportSave
+from app.services.transcription import transcribe_audio
+from app.services.report_generator import generate_report
+
+router = APIRouter()
+
+
+@router.post("/", response_model=MeetingResponse, status_code=status.HTTP_201_CREATED)
+async def create_meeting(
+    data: MeetingCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meeting = Meeting(
+        title=data.title,
+        date=data.date,
+        template_id=data.template_id,
+        user_id=current_user.id,
+    )
+    db.add(meeting)
+    await db.commit()
+    await db.refresh(meeting)
+    return meeting
+
+
+@router.get("/", response_model=list[MeetingResponse])
+async def list_meetings(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Meeting).where(Meeting.user_id == current_user.id).order_by(Meeting.date.desc())
+    )
+    return result.scalars().all()
+
+
+@router.get("/{meeting_id}", response_model=MeetingResponse)
+async def get_meeting(
+    meeting_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meeting = await _get_user_meeting(meeting_id, current_user.id, db)
+    return meeting
+
+
+@router.post("/{meeting_id}/upload-audio", response_model=MeetingResponse)
+async def upload_audio(
+    meeting_id: UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meeting = await _get_user_meeting(meeting_id, current_user.id, db)
+
+    # Save file to disk
+    audio_dir = os.path.join(settings.upload_dir, "audio")
+    os.makedirs(audio_dir, exist_ok=True)
+
+    ext = os.path.splitext(file.filename or "audio.webm")[1]
+    file_path = os.path.join(audio_dir, f"{meeting_id}{ext}")
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    meeting.audio_file_path = f"audio/{meeting_id}{ext}"
+
+    # Transcribe
+    transcription = await transcribe_audio(file_path)
+    meeting.raw_transcription = transcription
+
+    await db.commit()
+    await db.refresh(meeting)
+    return meeting
+
+
+@router.post("/{meeting_id}/generate-report", response_model=MeetingResponse)
+async def generate_meeting_report(
+    meeting_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meeting = await _get_user_meeting(meeting_id, current_user.id, db)
+
+    if not meeting.raw_transcription:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No transcription available. Upload and transcribe audio first.",
+        )
+
+    # Load template content
+    template_content = ""
+    if meeting.template_id:
+        result = await db.execute(select(Template).where(Template.id == meeting.template_id))
+        template = result.scalar_one_or_none()
+        if template:
+            template_content = template.content
+
+    if not template_content:
+        template_content = (
+            "# Compte-rendu de réunion\n\n"
+            "## Participants\n\n## Ordre du jour\n\n"
+            "## Discussions\n\n## Décisions\n\n## Actions à suivre\n"
+        )
+
+    report = await generate_report(meeting.raw_transcription, template_content)
+    meeting.report_markdown = report
+
+    await db.commit()
+    await db.refresh(meeting)
+    return meeting
+
+
+@router.put("/{meeting_id}/report", response_model=MeetingResponse)
+async def save_report(
+    meeting_id: UUID,
+    data: ReportSave,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meeting = await _get_user_meeting(meeting_id, current_user.id, db)
+    meeting.report_markdown = data.report_markdown
+    await db.commit()
+    await db.refresh(meeting)
+    return meeting
+
+
+@router.put("/{meeting_id}/validate", response_model=MeetingResponse)
+async def validate_report(
+    meeting_id: UUID,
+    data: ReportSave,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meeting = await _get_user_meeting(meeting_id, current_user.id, db)
+    meeting.report_markdown = data.report_markdown
+    meeting.report_validated = True
+    await db.commit()
+    await db.refresh(meeting)
+    return meeting
+
+
+@router.delete("/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_meeting(
+    meeting_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meeting = await _get_user_meeting(meeting_id, current_user.id, db)
+    await db.delete(meeting)
+    await db.commit()
+
+
+async def _get_user_meeting(meeting_id: UUID, user_id: UUID, db: AsyncSession) -> Meeting:
+    result = await db.execute(
+        select(Meeting).where(Meeting.id == meeting_id, Meeting.user_id == user_id)
+    )
+    meeting = result.scalar_one_or_none()
+    if meeting is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meeting not found")
+    return meeting
