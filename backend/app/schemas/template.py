@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -11,8 +10,8 @@ class TemplateCreate(BaseModel):
 
 
 class TemplateUpdate(BaseModel):
-    name: Optional[str] = None
-    content: Optional[str] = None
+    name: str | None = None
+    content: str | None = None
 
 
 class TemplateResponse(BaseModel):

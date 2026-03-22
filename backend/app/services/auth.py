@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -9,17 +9,17 @@ from app.config import settings
 
 
 def hash_password(plain: str) -> str:
-    return bcrypt.hash(plain)
+    return str(bcrypt.hash(plain))
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.verify(plain, hashed)
+    return bool(bcrypt.verify(plain, hashed))
 
 
 def create_access_token(user_id: UUID) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expiration_minutes)
+    expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_expiration_minutes)
     payload = {"sub": str(user_id), "exp": expire}
-    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    return str(jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm))
 
 
 def decode_token(token: str) -> UUID:

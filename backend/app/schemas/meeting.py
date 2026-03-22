@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -15,10 +14,10 @@ class MeetingResponse(BaseModel):
     id: UUID
     title: str
     date: datetime
-    raw_transcription: Optional[str] = None
-    report_markdown: Optional[str] = None
+    raw_transcription: str | None = None
+    report_markdown: str | None = None
     report_validated: bool
-    template_id: Optional[UUID] = None
+    template_id: UUID | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

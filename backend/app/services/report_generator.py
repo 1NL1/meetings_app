@@ -1,4 +1,6 @@
 from mistralai.client import Mistral
+from mistralai.client.models.systemmessage import SystemMessage
+from mistralai.client.models.usermessage import UserMessage
 
 from app.config import settings
 
@@ -15,11 +17,15 @@ async def generate_report(transcription: str, template_content: str) -> str:
         "en suivant exactement la structure du template. "
         "Rédige en Markdown."
     )
+    messages: list[SystemMessage | UserMessage] = [
+        SystemMessage(content=system_prompt),
+        UserMessage(content=f"Transcription :\n\n{transcription}"),
+    ]
     response = await client.chat.complete_async(
         model="mistral-large-latest",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Transcription :\n\n{transcription}"},
-        ],
+        messages=messages,  # type: ignore[arg-type]
     )
-    return response.choices[0].message.content
+    content = response.choices[0].message.content
+    if isinstance(content, str):
+        return content
+    return str(content)

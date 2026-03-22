@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from sqlalchemy import text
 
 from app.database import engine
@@ -14,6 +13,7 @@ async def lifespan(app: FastAPI):
     async with engine.connect() as conn:
         await conn.execute(text("SELECT 1"))
     yield
+
 
 app = FastAPI(title="MeetWise", lifespan=lifespan)
 

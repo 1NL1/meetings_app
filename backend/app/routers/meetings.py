@@ -1,18 +1,18 @@
 import os
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_current_user, get_db
 from app.models.meeting import Meeting
 from app.models.template import Template
 from app.models.user import User
 from app.schemas.meeting import MeetingCreate, MeetingResponse, ReportSave
-from app.services.transcription import transcribe_audio
 from app.services.report_generator import generate_report
+from app.services.transcription import transcribe_audio
 
 router = APIRouter()
 

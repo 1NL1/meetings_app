@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_current_user, get_db
 from app.models.template import Template
 from app.models.user import User
-from app.schemas.template import TemplateCreate, TemplateUpdate, TemplateResponse
+from app.schemas.template import TemplateCreate, TemplateResponse, TemplateUpdate
 
 router = APIRouter()
 
@@ -17,9 +17,7 @@ async def list_templates(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(
-        select(Template).where(Template.user_id == current_user.id)
-    )
+    result = await db.execute(select(Template).where(Template.user_id == current_user.id))
     return result.scalars().all()
 
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from httpx import AsyncClient
@@ -10,7 +10,7 @@ async def test_create_meeting(client: AsyncClient, auth_headers: dict):
         "/meetings/",
         json={
             "title": "Sprint Planning",
-            "date": datetime.now(timezone.utc).isoformat(),
+            "date": datetime.now(UTC).isoformat(),
         },
         headers=auth_headers,
     )
@@ -25,7 +25,7 @@ async def test_list_meetings(client: AsyncClient, auth_headers: dict):
             "/meetings/",
             json={
                 "title": title,
-                "date": datetime.now(timezone.utc).isoformat(),
+                "date": datetime.now(UTC).isoformat(),
             },
             headers=auth_headers,
         )
@@ -41,7 +41,7 @@ async def test_validate_saves_markdown(client: AsyncClient, auth_headers: dict):
         "/meetings/",
         json={
             "title": "Validation Test",
-            "date": datetime.now(timezone.utc).isoformat(),
+            "date": datetime.now(UTC).isoformat(),
         },
         headers=auth_headers,
     )
