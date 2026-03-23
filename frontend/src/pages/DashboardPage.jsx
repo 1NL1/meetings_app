@@ -4,9 +4,6 @@ import client from "../api/client";
 
 export default function DashboardPage() {
   const [meetings, setMeetings] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -23,15 +20,13 @@ export default function DashboardPage() {
     }
   };
 
-  const createMeeting = async (e) => {
-    e.preventDefault();
+  const createMeeting = async () => {
+    const now = new Date();
+    const title = `Réunion du ${now.toLocaleDateString("fr-FR")}`;
     const response = await client.post("/meetings/", {
       title,
-      date: new Date(date).toISOString(),
+      date: now.toISOString(),
     });
-    setShowModal(false);
-    setTitle("");
-    setDate("");
     navigate(`/meetings/${response.data.id}`);
   };
 
@@ -50,7 +45,7 @@ export default function DashboardPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Mes réunions</h1>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={createMeeting}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           Nouvelle réunion
@@ -83,46 +78,6 @@ export default function DashboardPage() {
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Nouvelle réunion</h2>
-            <form onSubmit={createMeeting} className="space-y-4">
-              <input
-                type="text"
-                placeholder="Titre"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full border rounded px-3 py-2"
-                required
-              />
-              <input
-                type="datetime-local"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full border rounded px-3 py-2"
-                required
-              />
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border rounded"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                >
-                  Créer
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>

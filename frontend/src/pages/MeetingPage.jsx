@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import client from "../api/client";
 import AudioUploader from "../components/AudioUploader";
@@ -12,7 +12,14 @@ export default function MeetingPage() {
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [audioMode, setAudioMode] = useState("record"); // "record" or "upload"
+  const [audioMode, setAudioMode] = useState("record");
+  const [showTranscription, setShowTranscription] = useState(false);
+
+  // Editable fields
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [participants, setParticipants] = useState("");
+  const saveTimeout = useRef(null);
 
   useEffect(() => {
     fetchData();
@@ -24,14 +31,50 @@ export default function MeetingPage() {
         client.get(`/meetings/${id}`),
         client.get("/templates/"),
       ]);
-      setMeeting(meetingRes.data);
+      const m = meetingRes.data;
+      setMeeting(m);
+      setTitle(m.title);
+      setDate(toLocalDatetime(m.date));
+      setParticipants(m.participants || "");
       setTemplates(templatesRes.data);
-      if (meetingRes.data.template_id) {
-        setSelectedTemplate(meetingRes.data.template_id);
+      if (m.template_id) {
+        setSelectedTemplate(m.template_id);
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const toLocalDatetime = (isoStr) => {
+    const d = new Date(isoStr);
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - offset * 60000);
+    return local.toISOString().slice(0, 16);
+  };
+
+  const autoSave = (field, value) => {
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(async () => {
+      await client.put(`/meetings/${id}`, { [field]: value });
+    }, 800);
+  };
+
+  const handleTitleChange = (e) => {
+    const v = e.target.value;
+    setTitle(v);
+    autoSave("title", v);
+  };
+
+  const handleDateChange = (e) => {
+    const v = e.target.value;
+    setDate(v);
+    autoSave("date", new Date(v).toISOString());
+  };
+
+  const handleParticipantsChange = (e) => {
+    const v = e.target.value;
+    setParticipants(v);
+    autoSave("participants", v);
   };
 
   const onTranscriptionDone = (updatedMeeting) => {
@@ -59,27 +102,63 @@ export default function MeetingPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">{meeting.title}</h1>
-        <p className="text-gray-500">
-          {new Date(meeting.date).toLocaleDateString("fr-FR", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </p>
-      </div>
+      {/* Meeting info */}
+      <section className="border rounded-lg p-6">
+        <h2 className="text-xl font-semibold mb-4">Informations</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Titre</label>
+            <input
+              type="text"
+              value={title}
+              onChange={handleTitleChange}
+              className="border rounded px-3 py-2 w-full max-w-md"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Date</label>
+            <input
+              type="datetime-local"
+              value={date}
+              onChange={handleDateChange}
+              className="border rounded px-3 py-2 w-full max-w-md"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Participants</label>
+            <input
+              type="text"
+              value={participants}
+              onChange={handleParticipantsChange}
+              placeholder="Ex : Alice, Bob, Charlie"
+              className="border rounded px-3 py-2 w-full max-w-md"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Séparés par des virgules. Transmis à Mistral pour le CR.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Audio Section */}
       <section className="border rounded-lg p-6">
         <h2 className="text-xl font-semibold mb-4">Audio</h2>
         {meeting.raw_transcription ? (
           <div>
-            <span className="text-green-600 font-medium">Transcription disponible</span>
-            <div className="mt-3 bg-gray-50 rounded p-4 max-h-64 overflow-y-auto">
-              <p className="whitespace-pre-wrap text-sm">{meeting.raw_transcription}</p>
-            </div>
+            <button
+              onClick={() => setShowTranscription(!showTranscription)}
+              className="flex items-center gap-2 text-green-600 font-medium hover:text-green-700"
+            >
+              <span className={`transition-transform ${showTranscription ? "rotate-90" : ""}`}>
+                &#9654;
+              </span>
+              Transcription disponible
+            </button>
+            {showTranscription && (
+              <div className="mt-3 bg-gray-50 rounded p-4 max-h-64 overflow-y-auto">
+                <p className="whitespace-pre-wrap text-sm">{meeting.raw_transcription}</p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

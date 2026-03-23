@@ -48,6 +48,17 @@ export default function ReportPage() {
     }
   };
 
+  const invalidateReport = async () => {
+    if (!confirm("Invalider ce compte-rendu ? Il redeviendra modifiable.")) return;
+    setSaving(true);
+    try {
+      const response = await client.put(`/meetings/${id}/invalidate`);
+      setMeeting(response.data);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <p>Chargement...</p>;
   if (!meeting) return <p>Réunion introuvable.</p>;
 
@@ -64,7 +75,15 @@ export default function ReportPage() {
             </span>
           )}
         </div>
-        {!isValidated && (
+        {isValidated ? (
+          <button
+            onClick={invalidateReport}
+            disabled={saving}
+            className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 disabled:opacity-50"
+          >
+            Invalider
+          </button>
+        ) : (
           <div className="flex gap-2">
             <button
               onClick={saveReport}
