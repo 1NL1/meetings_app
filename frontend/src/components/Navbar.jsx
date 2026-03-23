@@ -17,6 +17,12 @@ export default function Navbar() {
           <Link to="/templates" className="text-gray-600 hover:text-gray-900">
             Templates
           </Link>
+          <Link to="/documents" className="text-gray-600 hover:text-gray-900">
+            Documents
+          </Link>
+          <Link to="/chat" className="text-gray-600 hover:text-gray-900">
+            Chat
+          </Link>
         </div>
         <button
           onClick={logout}

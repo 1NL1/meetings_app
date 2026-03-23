@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import client from "../api/client";
 import AudioUploader from "../components/AudioUploader";
+import AudioRecorder from "../components/AudioRecorder";
 
 export default function MeetingPage() {
   const { id } = useParams();
@@ -11,6 +12,7 @@ export default function MeetingPage() {
   const [selectedTemplate, setSelectedTemplate] = useState("");
   const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [audioMode, setAudioMode] = useState("record"); // "record" or "upload"
 
   useEffect(() => {
     fetchData();
@@ -33,12 +35,17 @@ export default function MeetingPage() {
   };
 
   const onTranscriptionDone = (updatedMeeting) => {
-    setMeeting(updatedMeeting);
+    setMeeting((prev) => ({ ...prev, ...updatedMeeting }));
   };
 
   const generateReport = async () => {
     setGenerating(true);
     try {
+      if (selectedTemplate !== (meeting.template_id || "")) {
+        await client.put(`/meetings/${id}/template`, {
+          template_id: selectedTemplate || null,
+        });
+      }
       const response = await client.post(`/meetings/${id}/generate-report`);
       setMeeting(response.data);
       navigate(`/meetings/${id}/report`);
@@ -75,7 +82,36 @@ export default function MeetingPage() {
             </div>
           </div>
         ) : (
-          <AudioUploader meetingId={id} onDone={onTranscriptionDone} />
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAudioMode("record")}
+                className={`px-3 py-1 rounded text-sm ${
+                  audioMode === "record"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700"
+                }`}
+              >
+                Enregistrer en direct
+              </button>
+              <button
+                onClick={() => setAudioMode("upload")}
+                className={`px-3 py-1 rounded text-sm ${
+                  audioMode === "upload"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700"
+                }`}
+              >
+                Uploader un fichier
+              </button>
+            </div>
+
+            {audioMode === "record" ? (
+              <AudioRecorder meetingId={id} onDone={onTranscriptionDone} />
+            ) : (
+              <AudioUploader meetingId={id} onDone={onTranscriptionDone} />
+            )}
+          </div>
         )}
       </section>
 
@@ -121,7 +157,7 @@ export default function MeetingPage() {
             </button>
             {!meeting.raw_transcription && (
               <p className="text-sm text-gray-500">
-                Uploadez et transcrivez un audio d'abord.
+                Enregistrez ou uploadez un audio d'abord.
               </p>
             )}
           </div>
