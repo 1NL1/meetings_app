@@ -15,4 +15,6 @@ async def ask_question(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await answer_question(data.question, current_user.id, db, scope=data.scope)
+    return await answer_question(
+        data.question, current_user.id, db, scope=data.scope, allow_web_search=data.allow_web_search
+    )

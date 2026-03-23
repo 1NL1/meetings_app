@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class ChatQuestion(BaseModel):
     question: str
     scope: list[UUID] | None = None
+    allow_web_search: bool = False
 
 
 class SourceCitation(BaseModel):

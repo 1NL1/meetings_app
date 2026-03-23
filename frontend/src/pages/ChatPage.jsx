@@ -10,6 +10,7 @@ export default function ChatPage() {
   const [documents, setDocuments] = useState([]);
   const [selectedScope, setSelectedScope] = useState([]);
   const [showScope, setShowScope] = useState(false);
+  const [allowWebSearch, setAllowWebSearch] = useState(false);
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -49,7 +50,7 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
-      const payload = { question };
+      const payload = { question, allow_web_search: allowWebSearch };
       if (selectedScope.length > 0) {
         payload.scope = selectedScope;
       }
@@ -149,7 +150,16 @@ export default function ChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2 pt-4 border-t">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 pt-4 border-t">
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={allowWebSearch}
+            onChange={(e) => setAllowWebSearch(e.target.checked)}
+          />
+          Autoriser la recherche web (Wikipedia, Brave)
+        </label>
+        <div className="flex gap-2">
         <input
           type="text"
           value={input}
@@ -165,6 +175,7 @@ export default function ChatPage() {
         >
           Envoyer
         </button>
+        </div>
       </form>
     </div>
   );

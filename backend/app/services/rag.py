@@ -24,6 +24,7 @@ async def answer_question(
     user_id: UUID,
     db: AsyncSession,
     scope: list[UUID] | None = None,
+    allow_web_search: bool = False,
 ) -> ChatAnswer:
     """RAG pipeline: embed question, retrieve chunks, generate answer with citations."""
 
@@ -79,8 +80,8 @@ async def answer_question(
             }
         )
 
-    # 4. Fallback to external search if no relevant internal results
-    if not relevant_rows or max_similarity < SIMILARITY_THRESHOLD:
+    # 4. Fallback to external search if allowed and no relevant internal results
+    if allow_web_search and (not relevant_rows or max_similarity < SIMILARITY_THRESHOLD):
         external_results = await search_external(question)
         if external_results:
             used_external = True
