@@ -182,6 +182,32 @@ async def validate_report(
     return meeting
 
 
+@router.put("/{meeting_id}/invalidate", response_model=MeetingResponse)
+async def invalidate_report(
+    meeting_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meeting = await _get_user_meeting(meeting_id, current_user.id, db)
+    meeting.report_validated = False
+
+    # Remove embeddings for this meeting
+    from app.models.embedding import EmbeddingChunk
+
+    result = await db.execute(
+        select(EmbeddingChunk).where(
+            EmbeddingChunk.source_type == "meeting",
+            EmbeddingChunk.source_id == meeting_id,
+        )
+    )
+    for chunk in result.scalars().all():
+        await db.delete(chunk)
+
+    await db.commit()
+    await db.refresh(meeting)
+    return meeting
+
+
 @router.delete("/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_meeting(
     meeting_id: UUID,
@@ -189,6 +215,19 @@ async def delete_meeting(
     current_user: User = Depends(get_current_user),
 ):
     meeting = await _get_user_meeting(meeting_id, current_user.id, db)
+
+    # Remove embeddings for this meeting
+    from app.models.embedding import EmbeddingChunk
+
+    result = await db.execute(
+        select(EmbeddingChunk).where(
+            EmbeddingChunk.source_type == "meeting",
+            EmbeddingChunk.source_id == meeting_id,
+        )
+    )
+    for chunk in result.scalars().all():
+        await db.delete(chunk)
+
     await db.delete(meeting)
     await db.commit()
 
