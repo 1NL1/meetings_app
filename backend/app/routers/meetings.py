@@ -19,7 +19,7 @@ from app.dependencies import get_current_user, get_db
 from app.models.meeting import Meeting
 from app.models.template import Template
 from app.models.user import User
-from app.schemas.meeting import MeetingCreate, MeetingResponse, ReportSave
+from app.schemas.meeting import MeetingCreate, MeetingResponse, MeetingUpdate, ReportSave
 from app.services.embedding import embed_and_store
 from app.services.report_generator import generate_report
 from app.services.transcription import transcribe_audio, transcribe_audio_stream
@@ -37,6 +37,7 @@ async def create_meeting(
         title=data.title,
         date=data.date,
         template_id=data.template_id,
+        participants=data.participants,
         user_id=current_user.id,
     )
     db.add(meeting)
@@ -63,6 +64,25 @@ async def get_meeting(
     current_user: User = Depends(get_current_user),
 ):
     meeting = await _get_user_meeting(meeting_id, current_user.id, db)
+    return meeting
+
+
+@router.put("/{meeting_id}", response_model=MeetingResponse)
+async def update_meeting(
+    meeting_id: UUID,
+    data: MeetingUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meeting = await _get_user_meeting(meeting_id, current_user.id, db)
+    if data.title is not None:
+        meeting.title = data.title
+    if data.date is not None:
+        meeting.date = data.date
+    if data.participants is not None:
+        meeting.participants = data.participants
+    await db.commit()
+    await db.refresh(meeting)
     return meeting
 
 
@@ -125,7 +145,13 @@ async def generate_meeting_report(
             "## Discussions\n\n## Décisions\n\n## Actions à suivre\n"
         )
 
-    report = await generate_report(meeting.raw_transcription, template_content)
+    report = await generate_report(
+        meeting.raw_transcription,
+        template_content,
+        participants=meeting.participants,
+        title=meeting.title,
+        date=meeting.date.strftime("%d/%m/%Y %H:%M"),
+    )
     meeting.report_markdown = report
 
     await db.commit()

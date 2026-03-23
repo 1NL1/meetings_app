@@ -17,6 +17,7 @@ class Meeting(Base):
     audio_file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     raw_transcription: Mapped[str | None] = mapped_column(Text, nullable=True)
     report_markdown: Mapped[str | None] = mapped_column(Text, nullable=True)
+    participants: Mapped[str | None] = mapped_column(Text, nullable=True)
     report_validated: Mapped[bool] = mapped_column(Boolean, default=False)
     template_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("templates.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

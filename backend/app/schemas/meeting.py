@@ -8,12 +8,20 @@ class MeetingCreate(BaseModel):
     title: str
     date: datetime
     template_id: UUID | None = None
+    participants: str | None = None
+
+
+class MeetingUpdate(BaseModel):
+    title: str | None = None
+    date: datetime | None = None
+    participants: str | None = None
 
 
 class MeetingResponse(BaseModel):
     id: UUID
     title: str
     date: datetime
+    participants: str | None = None
     raw_transcription: str | None = None
     report_markdown: str | None = None
     report_validated: bool
