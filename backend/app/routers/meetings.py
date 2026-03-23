@@ -1,7 +1,16 @@
 import os
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,8 +20,9 @@ from app.models.meeting import Meeting
 from app.models.template import Template
 from app.models.user import User
 from app.schemas.meeting import MeetingCreate, MeetingResponse, ReportSave
+from app.services.embedding import embed_and_store
 from app.services.report_generator import generate_report
-from app.services.transcription import transcribe_audio
+from app.services.transcription import transcribe_audio, transcribe_audio_stream
 
 router = APIRouter()
 
@@ -123,6 +133,21 @@ async def generate_meeting_report(
     return meeting
 
 
+@router.put("/{meeting_id}/template", response_model=MeetingResponse)
+async def update_meeting_template(
+    meeting_id: UUID,
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    meeting = await _get_user_meeting(meeting_id, current_user.id, db)
+    template_id = data.get("template_id")
+    meeting.template_id = UUID(template_id) if template_id else None
+    await db.commit()
+    await db.refresh(meeting)
+    return meeting
+
+
 @router.put("/{meeting_id}/report", response_model=MeetingResponse)
 async def save_report(
     meeting_id: UUID,
@@ -149,6 +174,11 @@ async def validate_report(
     meeting.report_validated = True
     await db.commit()
     await db.refresh(meeting)
+
+    # Index the validated report for RAG
+    if meeting.report_markdown:
+        await embed_and_store(meeting.report_markdown, "meeting", meeting.id, db)
+
     return meeting
 
 
@@ -161,6 +191,32 @@ async def delete_meeting(
     meeting = await _get_user_meeting(meeting_id, current_user.id, db)
     await db.delete(meeting)
     await db.commit()
+
+
+@router.websocket("/{meeting_id}/transcribe")
+async def websocket_transcribe(websocket: WebSocket, meeting_id: UUID):
+    """WebSocket endpoint: receive audio chunks from browser, transcribe in real-time."""
+    await websocket.accept()
+
+    try:
+        transcription = await transcribe_audio_stream(websocket)
+
+        # Save transcription to DB
+        from app.database import async_session
+
+        async with async_session() as db:
+            result = await db.execute(select(Meeting).where(Meeting.id == meeting_id))
+            meeting = result.scalar_one_or_none()
+            if meeting:
+                meeting.raw_transcription = transcription
+                await db.commit()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 
 async def _get_user_meeting(meeting_id: UUID, user_id: UUID, db: AsyncSession) -> Meeting:

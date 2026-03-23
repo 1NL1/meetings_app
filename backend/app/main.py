@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.database import engine
-from app.routers import auth, meetings, templates
+from app.routers import auth, chat, documents, meetings, templates
 
 
 @asynccontextmanager
@@ -28,3 +28,5 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(meetings.router, prefix="/meetings", tags=["meetings"])
 app.include_router(templates.router, prefix="/templates", tags=["templates"])
+app.include_router(documents.router, prefix="/documents", tags=["documents"])
+app.include_router(chat.router, prefix="/chat", tags=["chat"])

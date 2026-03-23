@@ -11,3 +11,6 @@ bcrypt==4.0.1
 python-multipart
 mistralai
 httpx
+pgvector
+python-docx
+websockets

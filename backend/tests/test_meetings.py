@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -35,7 +36,10 @@ async def test_list_meetings(client: AsyncClient, auth_headers: dict):
 
 
 @pytest.mark.asyncio
-async def test_validate_saves_markdown(client: AsyncClient, auth_headers: dict):
+@patch("app.routers.meetings.embed_and_store", new_callable=AsyncMock)
+async def test_validate_saves_markdown(
+    mock_embed: AsyncMock, client: AsyncClient, auth_headers: dict
+):
     # Create a meeting
     create_resp = await client.post(
         "/meetings/",
@@ -57,3 +61,4 @@ async def test_validate_saves_markdown(client: AsyncClient, auth_headers: dict):
     data = response.json()
     assert data["report_validated"] is True
     assert data["report_markdown"] == "# Édité"
+    mock_embed.assert_called_once()

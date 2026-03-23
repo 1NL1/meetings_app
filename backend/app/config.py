@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expiration_minutes: int = 1440
     upload_dir: str = "/data/uploads"
+    brave_api_key: str = ""
 
     model_config = SettingsConfigDict(env_file=".env")
 
