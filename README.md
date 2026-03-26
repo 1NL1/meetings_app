@@ -19,7 +19,7 @@ docker-compose --version  # Docker Compose version 5.x.x
 ### Étape 1 — Se placer dans le dossier du projet
 
 ```bash
-cd meetwise 
+cd meetwise #ou meetings_app, le dossier de l'appli
 ```
 
 ### Étape 2 — Configurer les variables d'environnement
@@ -63,7 +63,7 @@ postgres-1  | ... database system is ready to accept connections
 Dans un **second terminal** (le premier est occupé par docker-compose) :
 
 ```bash
-cd meetwise
+cd meetwise     
 docker-compose exec backend alembic upgrade head
 ```
 
