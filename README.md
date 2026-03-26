@@ -19,7 +19,7 @@ docker-compose --version  # Docker Compose version 5.x.x
 ### Étape 1 — Se placer dans le dossier du projet
 
 ```bash
-cd meetwise
+cd meetings_app 
 ```
 
 ### Étape 2 — Configurer les variables d'environnement
@@ -51,7 +51,7 @@ Cette commande :
 4. Démarre le backend sur le port **8000**
 5. Démarre le frontend sur le port **3000**
 
-Attendre que les 3 conteneurs soient lancés. Tu verras dans les logs :
+Attendre que les 3 conteneurs soient lancés, ie jusqu'à voir dans les logs:
 ```
 backend-1   | INFO:     Uvicorn running on http://0.0.0.0:8000
 frontend-1  | ... ready ...
@@ -63,11 +63,11 @@ postgres-1  | ... database system is ready to accept connections
 Dans un **second terminal** (le premier est occupé par docker-compose) :
 
 ```bash
-cd meetwise
+cd meetings_app
 docker-compose exec backend alembic upgrade head
 ```
 
-Cela crée les tables `users`, `meetings`, `templates` dans PostgreSQL.
+Cela crée les tables dans PostgreSQL.
 
 ### Étape 5 — Accéder à l'application
 
