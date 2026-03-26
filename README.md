@@ -1,12 +1,12 @@
 # MeetWise
 
-Application web de gestion de réunions : transcription audio, génération de comptes-rendus, RAG sur les documents.
+Application web de gestion de réunions : transcription audio, génération de comptes-rendus suivant un modèle markdown, RAG sur les documents et CRs.
 
 ## Prérequis
 
-- **Docker** (v20+) — [installer Docker Desktop](https://docs.docker.com/get-docker/)
-- **Docker Compose** — inclus dans Docker Desktop, ou `brew install docker-compose`
-- **Une clé API Mistral** — obtenue sur [console.mistral.ai](https://console.mistral.ai)
+- **Docker** (v20+)
+- **Docker Compose** 
+- **Une clé API Mistral**
 
 Vérifier que tout est installé :
 ```bash
@@ -33,6 +33,7 @@ Ouvrir `.env` et remplir :
 ```env
 MISTRAL_API_KEY=ta_clé_api_mistral_ici
 JWT_SECRET=une_clé_secrète_générée    # générer avec : openssl rand -hex 32
+BRAVE_API_KEY=ta_clé_brave_ici      # pas obligatoire, pour chercher le net
 ```
 
 Les autres valeurs peuvent rester par défaut.
@@ -80,31 +81,6 @@ Cela crée les tables `users`, `meetings`, `templates` dans PostgreSQL.
 2. Créer un compte (email + mot de passe + nom)
 3. Se connecter
 4. Commencer à utiliser l'application
-
-## Commandes utiles
-
-```bash
-# Lancer en arrière-plan (mode détaché)
-docker-compose up --build -d
-
-# Voir les logs
-docker-compose logs -f
-
-# Voir les logs d'un seul service
-docker-compose logs -f backend
-
-# Arrêter les conteneurs
-docker-compose down
-
-# Arrêter et supprimer les volumes (reset complet de la DB)
-docker-compose down -v
-
-# Créer une nouvelle migration après modification d'un modèle
-docker-compose exec backend alembic revision --autogenerate -m "description du changement"
-
-# Appliquer les migrations
-docker-compose exec backend alembic upgrade head
-```
 
 ## Structure des services
 
