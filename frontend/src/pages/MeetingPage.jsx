@@ -35,7 +35,7 @@ export default function MeetingPage() {
       setMeeting(m);
       setTitle(m.title);
       setDate(toLocalDatetime(m.date));
-      setParticipants(m.participants || "");
+      setParticipants((m.participants || []).join(", "));
       setTemplates(templatesRes.data);
       if (m.template_id) {
         setSelectedTemplate(m.template_id);
@@ -74,7 +74,7 @@ export default function MeetingPage() {
   const handleParticipantsChange = (e) => {
     const v = e.target.value;
     setParticipants(v);
-    autoSave("participants", v);
+    autoSave("participants", v.split(",").map((s) => s.trim()).filter(Boolean));
   };
 
   const onTranscriptionDone = (updatedMeeting) => {

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.dependencies import get_current_user, get_db
+from app.models.glossary import GlossaryEntry
 from app.models.meeting import Meeting
 from app.models.template import Template
 from app.models.user import User
@@ -145,10 +146,16 @@ async def generate_meeting_report(
             "## Discussions\n\n## Décisions\n\n## Actions à suivre\n"
         )
 
+    glossary_result = await db.execute(
+        select(GlossaryEntry).where(GlossaryEntry.user_id == current_user.id)
+    )
+    glossary_terms = [e.term for e in glossary_result.scalars().all()]
+
     report = await generate_report(
         meeting.raw_transcription,
         template_content,
-        participants=meeting.participants,
+        participants=meeting.participants or [],
+        glossary_terms=glossary_terms,
         title=meeting.title,
         date=meeting.date.strftime("%d/%m/%Y %H:%M"),
     )

@@ -8,6 +8,7 @@ import ReportPage from "./pages/ReportPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import ChatPage from "./pages/ChatPage";
+import GlossaryPage from "./pages/GlossaryPage";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
@@ -32,6 +33,7 @@ function AppRoutes() {
           <Route path="/templates" element={<ProtectedRoute><TemplatesPage /></ProtectedRoute>} />
           <Route path="/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
           <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+          <Route path="/glossary" element={<ProtectedRoute><GlossaryPage /></ProtectedRoute>} />
         </Routes>
       </main>
     </>

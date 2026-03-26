@@ -10,7 +10,8 @@ client = Mistral(api_key=settings.mistral_api_key)
 async def generate_report(
     transcription: str,
     template_content: str,
-    participants: str | None = None,
+    participants: list[str] | None = None,
+    glossary_terms: list[str] | None = None,
     title: str | None = None,
     date: str | None = None,
 ) -> str:
@@ -20,16 +21,25 @@ async def generate_report(
         context_lines.append(f"Titre de la réunion : {title}")
     if date:
         context_lines.append(f"Date de la réunion : {date}")
-    if participants:
-        context_lines.append(f"Participants : {participants}")
+
+    correction_block = ""
+    if participants or glossary_terms:
+        parts = []
+        if participants:
+            parts.append(f"Participants de la réunion : {', '.join(participants)}")
+        if glossary_terms:
+            parts.append(f"Glossaire de termes à respecter : {', '.join(glossary_terms)}")
+        parts.append(
+            "Utilise exactement ces noms et termes dans ta rédaction, "
+            "même si la transcription contient des variantes phonétiques."
+        )
+        correction_block = "\n\n" + "\n".join(parts)
 
     context_info = ""
     if context_lines:
         context_info = (
             "\n\nInformations sur la réunion :\n"
             + "\n".join(f"- {line}" for line in context_lines)
-            + "\n\nInclus ces informations dans le compte-rendu. "
-            "Attribue les interventions aux bons participants quand c'est possible."
         )
 
     system_prompt = (
@@ -38,7 +48,7 @@ async def generate_report(
         f"{template_content}\n\n"
         "À partir de la transcription suivante, rédige le compte-rendu "
         "en suivant exactement la structure du template. "
-        f"Rédige en Markdown.{context_info}"
+        f"Rédige en Markdown.{context_info}{correction_block}"
     )
     messages: list[SystemMessage | UserMessage] = [
         SystemMessage(content=system_prompt),
