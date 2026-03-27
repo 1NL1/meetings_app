@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import client from "../api/client";
 
 export default function AudioRecorder({ meetingId, onDone }) {
   const [recording, setRecording] = useState(false);
@@ -6,6 +7,7 @@ export default function AudioRecorder({ meetingId, onDone }) {
   const [status, setStatus] = useState("");
   const mediaRecorderRef = useRef(null);
   const wsRef = useRef(null);
+  const receivedFinalRef = useRef(false);
 
   const startRecording = async () => {
     try {
@@ -21,6 +23,7 @@ export default function AudioRecorder({ meetingId, onDone }) {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        receivedFinalRef.current = false;
         setRecording(true);
         setStatus("Enregistrement en cours...");
         mediaRecorder.start(1000); // Send a chunk every second
@@ -32,12 +35,35 @@ export default function AudioRecorder({ meetingId, onDone }) {
           setTranscription(data.text);
           setStatus("Transcription partielle...");
         } else if (data.type === "final") {
+          receivedFinalRef.current = true;
           setTranscription(data.text);
           setStatus("Transcription terminée");
           if (onDone) {
             onDone({ raw_transcription: data.text });
           }
         }
+      };
+
+      ws.onclose = async () => {
+        if (receivedFinalRef.current) return;
+        // WebSocket closed before receiving final — poll DB until transcription is saved
+        setStatus("Finalisation de la transcription...");
+        for (let i = 0; i < 30; i++) {
+          await new Promise((r) => setTimeout(r, 3000));
+          try {
+            const res = await client.get(`/meetings/${meetingId}`);
+            if (res.data.raw_transcription) {
+              receivedFinalRef.current = true;
+              setTranscription(res.data.raw_transcription);
+              setStatus("Transcription terminée");
+              if (onDone) onDone({ raw_transcription: res.data.raw_transcription });
+              return;
+            }
+          } catch {
+            // continue polling
+          }
+        }
+        setStatus("Délai dépassé — rafraîchissez la page pour voir la transcription.");
       };
 
       ws.onerror = () => {

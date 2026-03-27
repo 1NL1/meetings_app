@@ -70,13 +70,15 @@ async def answer_question(
     # Only keep chunks above the threshold
     relevant_rows = [row for row in rows if row.similarity >= SIMILARITY_THRESHOLD]
     for i, row in enumerate(relevant_rows):
-        context_parts.append(f"[source:{i}] {row.chunk_text}")
+        source_name = await _get_source_name(str(row.source_type), row.source_id, db)
+        context_parts.append(f"[source:{i}] ({source_name}) {row.chunk_text}")
         source_map.append(
             {
                 "source_type": row.source_type,
                 "source_id": row.source_id,
                 "chunk_text": row.chunk_text,
                 "similarity": float(row.similarity),
+                "source_name": source_name,
             }
         )
 
@@ -144,10 +146,7 @@ async def answer_question(
         source_id = src["source_id"]
         assert isinstance(source_id, UUID)
 
-        if src["source_type"] == "external":
-            source_name = str(src.get("source_name", "Source externe"))
-        else:
-            source_name = await _get_source_name(str(src["source_type"]), source_id, db)
+        source_name = str(src.get("source_name", "Source inconnue"))
         sources.append(
             SourceCitation(
                 source_type=str(src["source_type"]),
@@ -164,9 +163,15 @@ async def answer_question(
 async def _get_source_name(source_type: str, source_id: UUID, db: AsyncSession) -> str:
     """Resolve the human-readable name of a source."""
     if source_type == "meeting":
-        result = await db.execute(select(Meeting.title).where(Meeting.id == source_id))
-        title = result.scalar_one_or_none()
-        return str(title) if title else "Réunion inconnue"
+        result = await db.execute(
+            select(Meeting.title, Meeting.date).where(Meeting.id == source_id)
+        )
+        row = result.one_or_none()
+        if row:
+            title, date = row
+            date_str = date.strftime("%d/%m/%Y") if date else ""
+            return f"{title} (réunion du {date_str})" if date_str else str(title)
+        return "Réunion inconnue"
     elif source_type == "document":
         result = await db.execute(select(Document.filename).where(Document.id == source_id))
         filename = result.scalar_one_or_none()

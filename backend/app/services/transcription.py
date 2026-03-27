@@ -76,11 +76,14 @@ async def transcribe_audio_stream(websocket: WebSocket) -> str:
         except Exception:
             pass
 
-    await websocket.send_json(
-        {
-            "type": "final",
-            "text": full_text,
-        }
-    )
+    try:
+        await websocket.send_json(
+            {
+                "type": "final",
+                "text": full_text,
+            }
+        )
+    except Exception:
+        pass
 
     return full_text
